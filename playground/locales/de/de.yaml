@@ -1,2 +1,4 @@
-de:
-  try: "Versuchen"
+code: de
+name: Deutsch
+dict:
+  test: test de
