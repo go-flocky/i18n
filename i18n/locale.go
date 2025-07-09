@@ -14,43 +14,53 @@ type Locale struct {
 	Dictionary *Dictionary
 }
 
-type rawLocale struct {
-	Code string         `yaml:"code"`
-	Name string         `yaml:"name"`
-	Dict map[string]any `yaml:"dict"`
+type localeConfig struct {
+	Code string `yaml:"code"`
+	Name string `yaml:"name"`
 }
 
-func (i *i18n) LoadLocale(localeDir fs.FS) error {
+func (i *I18n) LoadLocale(localeDir fs.FS, code string) error {
 	locale := &Locale{
+		Code: code,
 		Dictionary: &Dictionary{
 			ChildDict: make(map[string]*Dictionary),
 		},
 	}
 
-	err := fs.WalkDir(localeDir, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".yaml") {
+	err := fs.WalkDir(localeDir, ".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".yaml") {
+			return walkErr
+		}
+
+		data, err := fs.ReadFile(localeDir, path)
+		if err != nil {
 			return err
 		}
 
-		data, readErr := fs.ReadFile(localeDir, path)
-		if readErr != nil {
-			return readErr
+		var cfg localeConfig
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return err
 		}
 
-		var raw rawLocale
-		if unmarshalErr := yaml.Unmarshal(data, &raw); unmarshalErr != nil {
-			return unmarshalErr
+		if path == fmt.Sprintf("%s.yaml", cfg.Code) {
+			if locale.Code == "" {
+				locale.Code = cfg.Code
+			}
+			if locale.Name == "" {
+				locale.Name = cfg.Name
+			}
+			return nil
 		}
 
-		if locale.Code == "" {
-			locale.Code = raw.Code
+		var translations map[string]any
+		if err := yaml.Unmarshal(data, &translations); err != nil {
+			return err
 		}
 
-		if locale.Name == "" {
-			locale.Name = raw.Name
-		}
+		mergeDict(locale.Dictionary, buildDictTree(translations))
 
-		mergeDict(locale.Dictionary, buildDictTree(raw.Dict))
+		fmt.Println("Dict: ", locale.Dictionary.PrintTree())
+
 		return nil
 	})
 
@@ -58,15 +68,11 @@ func (i *i18n) LoadLocale(localeDir fs.FS) error {
 		return err
 	}
 
-	if locale.Code == "" {
-		return fmt.Errorf("no locale code found in directory")
-	}
-
 	i.RegisterLocale(locale)
 	return nil
 }
 
-func (i *i18n) LoadLocales() error {
+func (i *I18n) LoadLocales() error {
 	base := *i.localeFS
 	entries, err := fs.ReadDir(base, ".")
 	if err != nil {
@@ -83,7 +89,7 @@ func (i *i18n) LoadLocales() error {
 			return err
 		}
 
-		if err := i.LoadLocale(subFS); err != nil {
+		if err := i.LoadLocale(subFS, entry.Name()); err != nil {
 			return err
 		}
 	}

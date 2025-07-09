@@ -1,6 +1,7 @@
 package i18n
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"strings"
@@ -15,22 +16,25 @@ type i18nConfig struct {
 	DefaultLocaleCode  string   `yaml:"default"`
 }
 
-type i18n struct {
+type I18n struct {
 	FallbackLocaleCode []string
 	DefaultLocaleCode  string
 	locales            map[string]*Locale
 	localeFS           *fs.FS
 }
 
-func (i *i18n) GetLocale(code string) *Locale {
+func (i *I18n) GetLocale(code string) *Locale {
 	return i.locales[code]
 }
 
-func (i *i18n) RegisterLocale(locale *Locale) {
+func (i *I18n) RegisterLocale(locale *Locale) {
 	i.locales[locale.Code] = locale
 }
 
-func (i *i18n) T(localeCode, key string) string {
+func (i *I18n) T(localeCode, key string, args ...any) string {
+	if len(args) != 0 {
+		fmt.Printf("args: %v\n", args)
+	}
 	result := i.translate(localeCode, key)
 	if result != MissingTranslation {
 		return result
@@ -49,7 +53,7 @@ func (i *i18n) T(localeCode, key string) string {
 	return MissingTranslation
 }
 
-func (i *i18n) translate(localeCode, key string) string {
+func (i *I18n) translate(localeCode, key string) string {
 	locale := i.locales[localeCode]
 	if locale == nil {
 		return MissingTranslation
@@ -72,7 +76,7 @@ func (i *i18n) translate(localeCode, key string) string {
 	return MissingTranslation
 }
 
-func NewI18n(fs fs.FS) (*i18n, error) {
+func NewI18n(fs fs.FS) (*I18n, error) {
 	configFile, err := fs.Open("config.yaml")
 	if err != nil {
 		return nil, err
@@ -90,7 +94,7 @@ func NewI18n(fs fs.FS) (*i18n, error) {
 		return nil, err
 	}
 
-	return &i18n{
+	return &I18n{
 		locales:            make(map[string]*Locale),
 		FallbackLocaleCode: i18nConfig.FallbackLocaleCode,
 		DefaultLocaleCode:  i18nConfig.DefaultLocaleCode,

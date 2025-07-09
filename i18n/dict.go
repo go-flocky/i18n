@@ -1,6 +1,9 @@
 package i18n
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Dictionary struct {
 	Value     string
@@ -38,4 +41,23 @@ func mergeDict(dst, src *Dictionary) {
 			dst.ChildDict[key] = srcVal
 		}
 	}
+}
+
+func (d *Dictionary) PrintTree() string {
+	return d.printTreeHelper(0)
+}
+
+func (d *Dictionary) printTreeHelper(level int) string {
+	result := ""
+	indent := strings.Repeat("  ", level)
+
+	for key, child := range d.ChildDict {
+		if child.Value != "" && len(child.ChildDict) == 0 {
+			result += fmt.Sprintf("%s%s: %s\n", indent, key, child.Value)
+		} else {
+			result += fmt.Sprintf("%s%s:\n", indent, key)
+			result += child.printTreeHelper(level + 1)
+		}
+	}
+	return result
 }
