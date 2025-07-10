@@ -18,12 +18,6 @@ func main() {
 		slog.Error("Error loading locales:", "err", err)
 		return
 	}
-
-	fmt.Println(i18n.T("en", "hello"))
 	fmt.Println(i18n.T("de", "hello"))
-	fmt.Println(i18n.T("fr", "hello"))
-	fmt.Println("-------------------")
-	fmt.Println(i18n.T("en", "chicken", 1))
 	fmt.Println(i18n.T("de", "chicken", 2))
-	fmt.Println(i18n.T("fr", "chicken", 3))
 }

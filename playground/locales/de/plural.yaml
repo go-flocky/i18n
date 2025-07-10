@@ -1,7 +1,7 @@
 chicken:
-  - zero: Keine Hühner
-  - one: Ein Huhn
-  - two: Zwei Hühner
-  - few: Einige Hühner
-  - many: Viele Hühner
-  - other: "%d Hühner"
+  zero: Keine Hühner
+  one: Ein Huhn
+  two: Zwei Hühner
+  few: Einige Hühner
+  many: Viele Hühner
+  other: "%d Hühner"

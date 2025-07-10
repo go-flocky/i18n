@@ -8,17 +8,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Locale struct {
-	Code       string
-	Name       string
-	Dictionary *Dictionary
-}
-
-type localeConfig struct {
-	Code string `yaml:"code"`
-	Name string `yaml:"name"`
-}
-
 func (i *I18n) LoadLocale(localeDir fs.FS, code string) error {
 	locale := &Locale{
 		Code: code,
@@ -52,14 +41,33 @@ func (i *I18n) LoadLocale(localeDir fs.FS, code string) error {
 			return nil
 		}
 
-		var translations map[string]any
-		if err := yaml.Unmarshal(data, &translations); err != nil {
+		var raw map[string]any
+		if err := yaml.Unmarshal(data, &raw); err != nil {
 			return err
 		}
 
-		mergeDict(locale.Dictionary, buildDictTree(translations))
+		translations := make(map[string]any)
 
-		fmt.Println("Dict: ", locale.Dictionary.PrintTree())
+		for key, value := range raw {
+			switch val := value.(type) {
+			case map[string]any:
+				b, err := yaml.Marshal(val)
+				if err != nil {
+					return err
+				}
+				var dict DictionaryValue
+				if err := yaml.Unmarshal(b, &dict); err == nil {
+					return err
+				} else {
+					translations[key] = val
+					translations[key] = dict
+				}
+			default:
+				translations[key] = val
+			}
+		}
+
+		mergeDictionarys(locale.Dictionary, buildDictionaryTree(translations))
 
 		return nil
 	})

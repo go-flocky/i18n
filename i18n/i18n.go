@@ -9,20 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const MissingTranslation = "ERROR: Missing translation"
-
-type i18nConfig struct {
-	FallbackLocaleCode []string `yaml:"fallback"`
-	DefaultLocaleCode  string   `yaml:"default"`
-}
-
-type I18n struct {
-	FallbackLocaleCode []string
-	DefaultLocaleCode  string
-	locales            map[string]*Locale
-	localeFS           *fs.FS
-}
-
 func (i *I18n) GetLocale(code string) *Locale {
 	return i.locales[code]
 }
@@ -32,22 +18,56 @@ func (i *I18n) RegisterLocale(locale *Locale) {
 }
 
 func (i *I18n) T(localeCode, key string, args ...any) string {
-	if len(args) != 0 {
-		fmt.Printf("args: %v\n", args)
-	}
-	result := i.translate(localeCode, key)
-	if result != MissingTranslation {
-		return result
+	var value string
+
+	if len(args) >= 1 {
+		if count, ok := args[0].(int); ok {
+			value = i.translatePlural(localeCode, key, count)
+			if value != MissingTranslation {
+				return value
+			}
+		} else {
+			fmt.Printf("Invalid argument: %v\n", args[0])
+		}
 	}
 
-	for _, fallbackCode := range i.FallbackLocaleCode {
+	value = i.translate(localeCode, key)
+	if value != MissingTranslation {
+		return value
+	}
+
+	for _, fallbackCode := range i.FallbackLocaleCodes {
 		if fallbackCode == localeCode {
 			continue
 		}
-		result = i.translate(fallbackCode, key)
-		if result != MissingTranslation {
-			return result
+		value = i.translate(fallbackCode, key)
+		if value != MissingTranslation {
+			return value
 		}
+	}
+
+	return MissingTranslation
+}
+
+func (i *I18n) translatePlural(localeCode, key string, n int) string {
+	locale := i.locales[localeCode]
+	if locale == nil {
+		return MissingTranslation
+	}
+
+	keys := strings.Split(key, ".")
+	dict := locale.Dictionary
+
+	for _, part := range keys {
+		if dict == nil || dict.ChildDict == nil {
+			return MissingTranslation
+		}
+		dict = dict.ChildDict[part]
+	}
+
+
+	if dict != nil {
+		return dict.Value.One
 	}
 
 	return MissingTranslation
@@ -69,15 +89,15 @@ func (i *I18n) translate(localeCode, key string) string {
 		dict = dict.ChildDict[part]
 	}
 
-	if dict != nil && dict.Value != "" {
-		return dict.Value
+	if dict != nil && dict.Value.One != "" {
+		return dict.Value.One
 	}
 
 	return MissingTranslation
 }
 
-func NewI18n(fs fs.FS) (*I18n, error) {
-	configFile, err := fs.Open("config.yaml")
+func parseConfig(fs fs.FS) (*i18nConfig, error) {
+	configFile, err := fs.Open(ConfigFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -88,16 +108,26 @@ func NewI18n(fs fs.FS) (*I18n, error) {
 		return nil, err
 	}
 
-	var i18nConfig i18nConfig
+	i18nConfig := &i18nConfig{} 
 	err = yaml.Unmarshal(cfg, &i18nConfig)
 	if err != nil {
 		return nil, err
 	}
+	return i18nConfig, nil
+}
 
-	return &I18n{
-		locales:            make(map[string]*Locale),
-		FallbackLocaleCode: i18nConfig.FallbackLocaleCode,
-		DefaultLocaleCode:  i18nConfig.DefaultLocaleCode,
-		localeFS:           &fs,
-	}, nil
+func NewI18n(fs fs.FS) (*I18n, error) {
+	i18nConfig,err := parseConfig(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	instance := &I18n{
+		locales:             make(map[string]*Locale),
+		FallbackLocaleCodes: i18nConfig.FallbackLocaleCode,
+		DefaultLocaleCode:   i18nConfig.DefaultLocaleCode,
+		localeFS:            &fs,
+	}
+
+	return instance, nil
 }

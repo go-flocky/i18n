@@ -5,12 +5,7 @@ import (
 	"strings"
 )
 
-type Dictionary struct {
-	Value     string
-	ChildDict map[string]*Dictionary
-}
-
-func buildDictTree(data map[string]any) *Dictionary {
+func buildDictionaryTree(data map[string]any) *Dictionary {
 	root := &Dictionary{
 		ChildDict: make(map[string]*Dictionary),
 	}
@@ -18,25 +13,25 @@ func buildDictTree(data map[string]any) *Dictionary {
 	for k, v := range data {
 		switch val := v.(type) {
 		case string:
-			root.ChildDict[k] = &Dictionary{Value: val}
+			root.ChildDict[k] = &Dictionary{Value: DictionaryValue{One: val}}
 		case map[string]any:
-			root.ChildDict[k] = buildDictTree(val)
+			root.ChildDict[k] = buildDictionaryTree(val)
 		default:
-			root.ChildDict[k] = &Dictionary{Value: fmt.Sprint(val)}
+			root.ChildDict[k] = &Dictionary{Value: DictionaryValue{One: fmt.Sprintf("%s", val)}}
 		}
 	}
 
 	return root
 }
 
-func mergeDict(dst, src *Dictionary) {
+func mergeDictionarys(dst, src *Dictionary) {
 	if dst.ChildDict == nil {
 		dst.ChildDict = make(map[string]*Dictionary)
 	}
 
 	for key, srcVal := range src.ChildDict {
 		if dstVal, exists := dst.ChildDict[key]; exists {
-			mergeDict(dstVal, srcVal)
+			mergeDictionarys(dstVal, srcVal)
 		} else {
 			dst.ChildDict[key] = srcVal
 		}
@@ -52,7 +47,7 @@ func (d *Dictionary) printTreeHelper(level int) string {
 	indent := strings.Repeat("  ", level)
 
 	for key, child := range d.ChildDict {
-		if child.Value != "" && len(child.ChildDict) == 0 {
+		if child.Value.One != "" && len(child.ChildDict) == 0 {
 			result += fmt.Sprintf("%s%s: %s\n", indent, key, child.Value)
 		} else {
 			result += fmt.Sprintf("%s%s:\n", indent, key)
