@@ -1,0 +1,7 @@
+chicken:
+  zero: No chickens
+  one: One chicken
+  two: Two chickens
+  few: Few chickens
+  many: Many chickens
+  other: "%d chickens"

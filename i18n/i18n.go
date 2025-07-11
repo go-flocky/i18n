@@ -11,6 +11,14 @@ import (
 func (i *I18n) GetLocale(code string) *Locale {
 	return i.locales[code]
 }
+func (i *I18n) ListLocaleCodes() []LocaleCode {
+	locales := make([]LocaleCode, 0, len(i.Dictionary))
+	for k := range i.Dictionary {
+		locales = append(locales, k)
+
+	}
+	return locales
+}
 
 func (i *I18n) RegisterLocale(locale *Locale) {
 	i.locales[locale.Code] = locale

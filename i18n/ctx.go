@@ -21,6 +21,9 @@ func (i *I18n) GetLocaleFromCtx(ctx context.Context) LocaleCode {
 
 	switch localeCode := localeCode.(type) {
 	case string:
+		if !i.HasLocale(localeCode) {
+			return i.config.DefaultLocaleCode
+		}
 		if localeCode != "" {
 			return localeCode
 		}
