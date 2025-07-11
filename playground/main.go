@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	internalI18n"github.com/go-flocky/i18n/i18n"
+	internalI18n "github.com/go-flocky/i18n/i18n"
 	"github.com/go-flocky/i18n/playground/locales"
 )
 
