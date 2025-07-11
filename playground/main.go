@@ -1,23 +1,55 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log/slog"
+	"log"
 
-	flockyI18n "github.com/go-flocky/i18n/i18n"
+	internalI18n"github.com/go-flocky/i18n/i18n"
 	"github.com/go-flocky/i18n/playground/locales"
 )
 
 func main() {
-	i18n, err := flockyI18n.NewI18n(locales.LocaleFS)
+	i18n, err := internalI18n.NewI18n(locales.LocaleFS)
 	if err != nil {
-		slog.Error("Error creating i18n instance:", "err", err)
+		log.Println("Error creating i18n instance: ", err)
 		return
 	}
 	if err := i18n.LoadLocales(); err != nil {
-		slog.Error("Error loading locales:", "err", err)
+		log.Println("Error loading locales: ", err)
 		return
 	}
-	fmt.Println(i18n.T("de", "hello"))
-	fmt.Println(i18n.T("de", "chicken", 2))
+
+	// en
+	fmt.Println("En: ")
+	ctx, err := i18n.WithLocale(context.Background(), "en")
+	if err != nil {
+		log.Println("Error set locale in context: ", err)
+	}
+
+	fmt.Println(i18n.T(ctx, "anrsietnai"))
+	fmt.Println(i18n.T(ctx, "hello", "You"))
+	fmt.Println(i18n.T(ctx, "chicken.zero", 1))
+
+	//de
+	fmt.Println("De: ")
+	ctx, err = i18n.WithLocale(ctx, "fr")
+	if err != nil {
+		log.Println("Error set locale in context: ", err)
+	}
+
+	fmt.Println(i18n.T(ctx, "anrsietnai"))
+	fmt.Println(i18n.T(ctx, "hello", "You"))
+	fmt.Println(i18n.T(ctx, "chicken.zero", 1))
+
+	// fr
+	fmt.Println("Fr: ")
+	ctx, err = i18n.WithLocale(ctx, "fr")
+	if err != nil {
+		log.Println("Error set locale in context: ", err)
+	}
+
+	fmt.Println(i18n.T(ctx, "anrsietnai"))
+	fmt.Println(i18n.T(ctx, "hello", "You"))
+	fmt.Println(i18n.T(ctx, "chicken.zero", 1))
 }

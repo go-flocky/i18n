@@ -1,12 +1,11 @@
 package i18n
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"io/fs"
-	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/go-flocky/i18n/internal/kvTree"
 )
 
 func (i *I18n) GetLocale(code string) *Locale {
@@ -17,116 +16,63 @@ func (i *I18n) RegisterLocale(locale *Locale) {
 	i.locales[locale.Code] = locale
 }
 
-func (i *I18n) T(localeCode, key string, args ...any) string {
-	var value string
-
-	if len(args) >= 1 {
-		if count, ok := args[0].(int); ok {
-			value = i.translatePlural(localeCode, key, count)
-			if value != MissingTranslation {
-				return value
-			}
-		} else {
-			fmt.Printf("Invalid argument: %v\n", args[0])
-		}
-	}
-
-	value = i.translate(localeCode, key)
-	if value != MissingTranslation {
-		return value
-	}
-
-	for _, fallbackCode := range i.FallbackLocaleCodes {
-		if fallbackCode == localeCode {
-			continue
-		}
-		value = i.translate(fallbackCode, key)
-		if value != MissingTranslation {
-			return value
-		}
-	}
-
-	return MissingTranslation
+func (i *I18n) HasLocale(locale LocaleCode) bool {
+	_, ok := i.Dictionary[locale]
+	return ok
 }
 
-func (i *I18n) translatePlural(localeCode, key string, n int) string {
-	locale := i.locales[localeCode]
-	if locale == nil {
-		return MissingTranslation
+func (i *I18n) GetDictionaryForCode(localeCode LocaleCode) (*kvtree.KeyValueTree[string], bool) {
+	dict, ok := i.Dictionary[localeCode]
+	return dict, ok
+}
+
+func (i *I18n) T(ctx context.Context, key string, args ...any) string {
+	if translated := i.translate(i.GetLocaleFromCtx(ctx), key, args...); translated != "" {
+		return translated
 	}
 
-	keys := strings.Split(key, ".")
-	dict := locale.Dictionary
-
-	for _, part := range keys {
-		if dict == nil || dict.ChildDict == nil {
-			return MissingTranslation
+	for _, fallbackCode := range i.config.FallbackLocaleCode {
+		if translated := i.translate(fallbackCode, key, args...); translated != "" {
+			return translated
 		}
-		dict = dict.ChildDict[part]
 	}
 
-
-	if dict != nil {
-		return dict.Value.One
-	}
-
-	return MissingTranslation
+	return MissingTranslation(i.GetLocaleFromCtx(ctx), key)
 }
 
-func (i *I18n) translate(localeCode, key string) string {
-	locale := i.locales[localeCode]
-	if locale == nil {
-		return MissingTranslation
+func (i *I18n) translate(localeCode LocaleCode, key string, args ...any) string {
+	dict, ok := i.GetDictionaryForCode(localeCode)
+	if !ok {
+		return ""
 	}
 
-	keys := strings.Split(key, ".")
-	dict := locale.Dictionary
-
-	for _, part := range keys {
-		if dict == nil || dict.ChildDict == nil {
-			return MissingTranslation
-		}
-		dict = dict.ChildDict[part]
+	translated, ok := dict.Get(key)
+	if !ok {
+		return ""
 	}
 
-	if dict != nil && dict.Value.One != "" {
-		return dict.Value.One
+	if len(args) > 0 {
+		return fmt.Sprintf(*translated, args...)
 	}
 
-	return MissingTranslation
+	return *translated
 }
 
-func parseConfig(fs fs.FS) (*i18nConfig, error) {
-	configFile, err := fs.Open(ConfigFileName)
+func NewI18n(filesystem fs.FS) (*I18n, error) {
+	i18nConfig, err := parseConfig(filesystem)
 	if err != nil {
-		return nil, err
-	}
-	defer configFile.Close()
-
-	cfg, err := io.ReadAll(configFile)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	i18nConfig := &i18nConfig{} 
-	err = yaml.Unmarshal(cfg, &i18nConfig)
-	if err != nil {
-		return nil, err
-	}
-	return i18nConfig, nil
-}
-
-func NewI18n(fs fs.FS) (*I18n, error) {
-	i18nConfig,err := parseConfig(fs)
-	if err != nil {
-		return nil, err
+	if i18nConfig.KeySeparator == "" {
+		i18nConfig.KeySeparator = "."
 	}
 
 	instance := &I18n{
-		locales:             make(map[string]*Locale),
-		FallbackLocaleCodes: i18nConfig.FallbackLocaleCode,
-		DefaultLocaleCode:   i18nConfig.DefaultLocaleCode,
-		localeFS:            &fs,
+		locales:    make(map[string]*Locale),
+		config:     *i18nConfig,
+		localeFS:   filesystem,
+		Dictionary: make(map[string]*kvtree.KeyValueTree[string]),
 	}
 
 	return instance, nil

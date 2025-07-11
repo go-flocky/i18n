@@ -1,37 +1,31 @@
 package i18n
 
-import "io/fs"
+import (
+	"io/fs"
 
-type i18nConfig struct {
-	FallbackLocaleCode []string `yaml:"fallback"`
-	DefaultLocaleCode  string   `yaml:"default"`
-}
+	"github.com/go-flocky/i18n/internal/kvTree"
+)
 
 type I18n struct {
-	FallbackLocaleCodes []string
-	DefaultLocaleCode   string
-	locales             map[string]*Locale
-	localeFS            *fs.FS
+	locales    map[string]*Locale
+	localeFS   fs.FS
+	Dictionary map[LocaleCode]*kvtree.KeyValueTree[string]
+	config     i18nConfig
 }
 
-type Dictionary struct {
-	Value     DictionaryValue
-	ChildDict map[string]*Dictionary
-}
-
-type DictionaryValue struct {
-	Zero  string `yaml:"zero"`
-	One   string `yaml:"one"`
-	Two   string `yaml:"two"`
-	Few   string `yaml:"few"`
-	Many  string `yaml:"many"`
-	Other string `yaml:"other"`
-}
+type LocaleCode = string
 
 type Locale struct {
-	Code       string
-	Name       string
-	Dictionary *Dictionary
+	Code LocaleCode
+	Name string
+}
+
+type LocaleContextKey = string
+type i18nConfig struct {
+	FallbackLocaleCode []string         `yaml:"fallback"`
+	DefaultLocaleCode  string           `yaml:"default"`
+	KeySeparator       string           `yaml:"separator"`
+	LocaleContextKey   LocaleContextKey `yaml:"ctxKey"`
 }
 
 type localeConfig struct {

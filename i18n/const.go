@@ -1,7 +1,11 @@
 package i18n
 
-const(
- MissingTranslation = "ERROR: Missing translation"
- ConfigFileName = "config.yaml"
+import "fmt"
 
+const (
+	ConfigFileName        = "config.yaml"
 )
+
+func MissingTranslation(localeCode, key string) string {
+    return fmt.Sprintf("!(MISSING: key=%s.%s)", localeCode, key)
+}
