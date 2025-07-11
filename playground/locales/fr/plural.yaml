@@ -1,7 +1,7 @@
 chicken:
-  - zero: Non poulet
-  - one: Un poulet
-  - two: Deux poulets
-  - few: Quelques poulets
-  - many: Beaucoup de poulets
-  - other: "%d poulets"
+  zero: Non poulet
+  one: Un poulet
+  two: Deux poulets
+  few: Quelques poulets
+  many: Beaucoup de poulets
+  other: "%d poulets"

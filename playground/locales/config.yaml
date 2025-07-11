@@ -1,4 +1,3 @@
-default: en
-fallback:
-  - en
-  - de
+default: de
+separator: "."
+ctxKey: locale
